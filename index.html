@@ -1,0 +1,458 @@
+<!doctype html>
+<html lang="fr"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Duel Guinée">
+<meta name="theme-color" content="#0e1c16">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" href="icon-192.png">
+<style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}[hidden]{display:none!important}</style>
+<title>Duel Guinée</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Figtree:wght@400;600;700&display=swap">
+<style>
+/* Layout: deux moitiés d'écran, une par joueur (face à face = moitié du haut retournée), barre centrale avec chrono. Look unique, nuit verte + couleurs du drapeau. */
+:root{
+  --bg:#0e1c16; --surface:#17291f; --surface-2:#203629; --ink:#f4efe1; --muted:#a9b9ab;
+  --red:#d9412f; --gold:#f2c230; --green:#2fa36b;
+  --display:"Bricolage Grotesque","Trebuchet MS",system-ui,sans-serif;
+  --body:"Figtree",system-ui,-apple-system,sans-serif;
+  color-scheme:dark;
+}
+[hidden]{display:none!important}
+html,body{height:100%;overflow:hidden}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:16px;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));
+  -webkit-user-select:none;user-select:none;touch-action:manipulation;box-sizing:border-box}
+*,*::before,*::after{box-sizing:border-box}
+button{font:inherit;color:inherit}
+:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+
+/* ---------- Écrans réglages / fin ---------- */
+.screen{position:fixed;inset:0;display:grid;place-items:center;overflow:auto;background:var(--bg);
+  padding:calc(env(safe-area-inset-top,0px) + 16px) max(16px,env(safe-area-inset-right,0px)) calc(env(safe-area-inset-bottom,0px) + 16px) max(16px,env(safe-area-inset-left,0px))}
+.card{width:100%;max-width:520px;display:grid;gap:20px}
+.flag{display:flex;height:8px;width:96px}.flag i{flex:1}
+.flag i:nth-child(1){background:var(--red)}.flag i:nth-child(2){background:var(--gold)}.flag i:nth-child(3){background:var(--green)}
+h1{margin:0;font-family:var(--display);font-weight:800;font-size:clamp(44px,11vw,68px);line-height:.92;letter-spacing:-.02em;text-wrap:balance}
+h1 em{font-style:normal;color:var(--gold)}
+.lead{margin:0;color:var(--muted);font-size:17px;line-height:1.45;max-width:60ch}
+.lbl{display:block;font-size:12px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin-bottom:8px}
+.names{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.names input{width:100%;background:var(--surface);border:0;border-bottom:3px solid;padding:12px;font:600 18px var(--body);color:var(--ink);border-radius:0}
+#n1{border-color:var(--red)}#n2{border-color:var(--green)}
+.seg{display:flex;background:var(--surface)}
+.seg label{flex:1;text-align:center;padding:11px 6px;cursor:pointer;font-weight:700}
+.seg input{position:absolute;opacity:0;pointer-events:none}
+.seg label:has(input:checked){background:var(--gold);color:var(--bg)}
+.seg label:has(input:focus-visible){outline:3px solid var(--gold);outline-offset:-3px}
+.go{background:var(--gold);color:var(--bg);border:0;padding:16px;font-family:var(--display);font-weight:800;font-size:24px;cursor:pointer}
+.ghost{background:transparent;border:0;box-shadow:inset 0 0 0 2px var(--surface-2);padding:14px;font-weight:700;cursor:pointer}
+.row{display:flex;gap:10px;flex-wrap:wrap}.row>*{flex:1}
+.keys{color:var(--muted);font-size:15px;line-height:1.5}
+kbd{font:700 13px var(--body);background:var(--surface-2);padding:1px 6px;color:var(--ink)}
+.final{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.final div{background:var(--surface);padding:16px;border-top:5px solid}
+.final .f1{border-color:var(--red)}.final .f2{border-color:var(--green)}
+.final b{display:block;font-family:var(--display);font-size:56px;line-height:1;font-variant-numeric:tabular-nums}
+.final span{font-weight:700;overflow-wrap:anywhere}
+
+/* ---------- Arène ---------- */
+#arena{position:fixed;inset:0;display:grid;gap:0;
+  padding:env(safe-area-inset-top,0px) max(10px,env(safe-area-inset-right,0px)) env(safe-area-inset-bottom,0px) max(10px,env(safe-area-inset-left,0px))}
+#arena.facing{grid-template-areas:"p2" "mid" "p1";grid-template-rows:1fr auto 1fr}
+#arena.side{grid-template-areas:"mid mid" "p1 p2";grid-template-rows:auto 1fr;grid-template-columns:1fr 1fr;column-gap:14px}
+.half{display:flex;flex-direction:column;gap:12px;padding:12px 4px;min-height:0;min-width:0}
+.half.p1{grid-area:p1}.half.p2{grid-area:p2}
+#arena.facing .p2{transform:rotate(180deg)}
+.who{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.who .nm{font-weight:700;font-size:17px;display:flex;align-items:center;gap:8px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.who .nm::before{content:"";width:10px;height:10px;flex:none}
+.p1 .nm::before{background:var(--red)}.p2 .nm::before{background:var(--green)}
+.who .pts{font-family:var(--display);font-weight:800;font-size:30px;line-height:1;font-variant-numeric:tabular-nums}
+.q{margin:0;font-family:var(--display);font-weight:600;font-size:clamp(17px,2.4vh + 1vw,28px);line-height:1.18;text-wrap:balance;flex:1;display:flex;align-items:center;min-height:0}
+.ans{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.ans button{position:relative;background:var(--surface);border:0;padding:12px 10px;min-height:56px;text-align:left;
+  font-weight:600;font-size:clamp(14px,1.6vh + .6vw,18px);line-height:1.2;cursor:pointer;border-left:4px solid transparent}
+.p1 .ans button{border-left-color:color-mix(in srgb,var(--red) 55%,transparent)}
+.p2 .ans button{border-left-color:color-mix(in srgb,var(--green) 55%,transparent)}
+.ans button:active{background:var(--surface-2)}
+.ans button kbd{position:absolute;right:6px;top:6px;display:none}
+.kb .ans button kbd{display:block}
+.ans button.wrong{background:color-mix(in srgb,var(--red) 30%,var(--surface));text-decoration:line-through}
+.ans button.right{background:var(--gold);color:var(--bg);border-left-color:var(--gold)}
+.ans button:disabled{cursor:default}
+.half.locked .ans button:not(.wrong):not(.right){opacity:.45}
+.status{min-height:22px;font-weight:700;font-size:15px;color:var(--muted)}
+.status.win{color:var(--gold)}
+
+.mid{grid-area:mid;display:flex;align-items:center;gap:12px;padding:8px 6px;background:var(--surface);flex-wrap:wrap}
+.mid .num{font-family:var(--display);font-weight:800;font-size:18px;font-variant-numeric:tabular-nums;white-space:nowrap}
+.mid .cat{font-size:12px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;padding:3px 8px;background:var(--surface-2);color:var(--gold)}
+.mid .bar{flex:1;min-width:80px;height:8px;background:var(--surface-2);overflow:hidden}
+.mid .bar i{display:block;height:100%;background:var(--gold);transform-origin:left;transform:scaleX(1)}
+.mid .info{flex-basis:100%;font-size:14px;line-height:1.35;color:var(--ink)}
+.mid .info:empty{display:none}
+.mid button{background:transparent;border:0;color:var(--muted);font-weight:700;cursor:pointer;padding:4px 6px}
+#arena.side .info{text-align:left}
+#arena.solo{grid-template-areas:"mid" "p1";grid-template-rows:auto 1fr;grid-template-columns:minmax(0,640px);justify-content:center}
+#arena.solo .p2{display:none}
+#arena.solo .p1{justify-content:center;gap:22px;padding-block:20px}
+#arena.solo .q{flex:none;font-size:clamp(22px,6vw,32px)}
+#arena.solo .ans{grid-template-columns:1fr}
+#arena.solo .ans button{min-height:58px;font-size:18px}
+.joker{background:transparent;border:0;box-shadow:inset 0 0 0 2px var(--gold);color:var(--gold);font-weight:700;font-size:14px;padding:6px 10px;cursor:pointer;margin-left:auto}
+.joker:disabled{box-shadow:inset 0 0 0 2px var(--surface-2);color:var(--muted);cursor:default}
+.ans button.gone{visibility:hidden}
+.streak{font-size:13px;font-weight:700;color:var(--gold);letter-spacing:.06em;text-transform:uppercase}
+#review{display:grid;gap:8px}
+#review .rv{background:var(--surface);padding:12px 14px;font-size:15px;line-height:1.4}
+#review .rv b{display:block;color:var(--gold);margin-top:2px}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+</head><body>
+<div id="setup" class="screen">
+  <div class="card">
+    <div class="flag" aria-hidden="true"><i></i><i></i><i></i></div>
+    <h1>Duel <em>Guinée</em></h1>
+    <p class="lead" id="lead"></p>
+    <div><span class="lbl">Joueurs</span>
+      <div class="seg"><label><input type="radio" name="pl" id="pl1" value="1" checked>Solo</label><label><input type="radio" name="pl" id="pl2" value="2">À deux</label></div></div>
+    <div class="names">
+      <div><label class="lbl" for="n1" id="n1lbl">Joueur rouge</label><input id="n1" maxlength="14" value="Mory" autocomplete="off"></div>
+      <div id="n2wrap"><label class="lbl" for="n2">Joueur vert</label><input id="n2" maxlength="14" value="Joueur 2" autocomplete="off"></div>
+    </div>
+    <div><span class="lbl">Nombre de questions</span>
+      <div class="seg"><label><input type="radio" name="cnt" id="c10" value="10">10</label><label><input type="radio" name="cnt" id="c15" value="15" checked>15</label><label><input type="radio" name="cnt" id="c20" value="20">20</label></div></div>
+    <div><span class="lbl">Niveau</span>
+      <div class="seg"><label><input type="radio" name="lvl" id="l0" value="0">Classique</label><label><input type="radio" name="lvl" id="l1" value="1" checked>Costaud</label><label><input type="radio" name="lvl" id="l2" value="2">Mélange</label></div></div>
+    <div id="poswrap"><span class="lbl">Position</span>
+      <div class="seg"><label><input type="radio" name="mode" id="mf" value="facing">Face à face</label><label><input type="radio" name="mode" id="ms" value="side">Côte à côte</label></div></div>
+    <p class="keys" id="keyhint">Face à face : posez le téléphone à plat entre vous deux. Au clavier : rouge joue avec <kbd>A</kbd> <kbd>Z</kbd> <kbd>E</kbd> <kbd>R</kbd>, vert avec <kbd>U</kbd> <kbd>I</kbd> <kbd>O</kbd> <kbd>P</kbd>.</p>
+    <button class="go" id="start">C'EST PARTI</button>
+  </div>
+</div>
+
+<div id="arena" class="facing" hidden>
+  <section class="half p2" data-p="1">
+    <div class="who"><span class="nm"></span><span class="pts">0</span></div>
+    <p class="q"></p>
+    <div class="ans"></div>
+    <div class="status"></div>
+  </section>
+  <div class="mid">
+    <span class="num"></span><span class="cat"></span><div class="bar"><i></i></div>
+    <button id="quit" aria-label="Quitter la partie">Quitter</button>
+    <div class="info"></div>
+  </div>
+  <section class="half p1" data-p="0">
+    <div class="who"><span class="nm"></span><span class="streak" id="streak"></span><button class="joker" id="joker" type="button" hidden>50/50</button><span class="pts">0</span></div>
+    <p class="q"></p>
+    <div class="ans"></div>
+    <div class="status"></div>
+  </section>
+</div>
+
+<div id="end" class="screen" hidden>
+  <div class="card">
+    <div class="flag" aria-hidden="true"><i></i><i></i><i></i></div>
+    <span class="lbl" id="endlbl">Fin du duel</span>
+    <h1 id="winner"></h1>
+    <div class="final"><div class="f1"><b id="s1">0</b><span id="e1"></span></div><div class="f2"><b id="s2">0</b><span id="e2"></span></div></div>
+    <div id="review"></div>
+    <div class="row"><button class="go" id="again">REVANCHE</button><button class="ghost" id="back">Réglages</button></div>
+  </div>
+</div>
+
+<script>
+(() => {
+const Q = [
+ ["Géographie","Quelle est la capitale de la Guinée ?","Conakry",["Kankan","Labé","Kindia"],"Le centre historique de Conakry est sur la presqu'île de Kaloum."],
+ ["Histoire","En quelle année la Guinée a-t-elle obtenu son indépendance ?","1958",["1960","1956","1962"],"Le 2 octobre 1958, première colonie d'Afrique-Occidentale française à devenir indépendante."],
+ ["Histoire","Qui fut le premier président de la Guinée ?","Ahmed Sékou Touré",["Lansana Conté","Alpha Condé","Diallo Telli"],"Il a dirigé le pays de 1958 jusqu'à sa mort en 1984."],
+ ["Histoire","Au référendum de septembre 1958, la Guinée a voté…","« Non » à la Communauté française",["« Oui » à la Communauté française","Le report du vote","L'abstention"],"Elle est le seul territoire à avoir dit non, ce qui a entraîné l'indépendance immédiate."],
+ ["Histoire","Complète la phrase de Sékou Touré : « Nous préférons la pauvreté dans la liberté à… »","la richesse dans l'esclavage",["la paix dans la soumission","l'abondance sans dignité","le confort dans la dépendance"],"Discours prononcé à Conakry le 25 août 1958, devant le général de Gaulle."],
+ ["Histoire","Devant quel dirigeant français ce discours célèbre a-t-il été prononcé ?","Charles de Gaulle",["Georges Pompidou","Vincent Auriol","René Coty"],"De Gaulle était en tournée africaine pour présenter son projet de Communauté."],
+ ["Histoire","Quel grand résistant a combattu la colonisation française à la fin du XIXe siècle ?","Samory Touré",["Lat Dior","Béhanzin","Soundiata Keïta"],"Il a bâti l'empire du Wassoulou et a résisté près de vingt ans."],
+ ["Histoire","En quelle année Samory Touré a-t-il été capturé par les Français ?","1898",["1885","1910","1870"],"Il est mort en exil au Gabon en 1900."],
+ ["Histoire","Qui a présidé la Guinée de 1984 à 2008 ?","Lansana Conté",["Ahmed Sékou Touré","Moussa Dadis Camara","Alpha Condé"],"Il a pris le pouvoir quelques jours après la mort de Sékou Touré."],
+ ["Histoire","Qui a été élu président en 2010, lors de la première élection pluraliste reconnue ?","Alpha Condé",["Cellou Dalein Diallo","Sidya Touré","Lansana Kouyaté"],"Il a battu Cellou Dalein Diallo au second tour."],
+ ["Histoire","Comment s'appelait la colonie juste avant l'indépendance ?","Guinée française",["Soudan français","Haute-Volta","Côte-de-l'Or"],"Le Soudan français est devenu le Mali, la Haute-Volta le Burkina Faso."],
+ ["Géographie","Combien de pays ont une frontière avec la Guinée ?","6",["4","5","7"],"Guinée-Bissau, Sénégal, Mali, Côte d'Ivoire, Liberia et Sierra Leone."],
+ ["Géographie","Lequel de ces pays n'a PAS de frontière avec la Guinée ?","Burkina Faso",["Mali","Sierra Leone","Liberia"],"Le Mali sépare la Guinée du Burkina Faso."],
+ ["Géographie","En combien de régions naturelles divise-t-on la Guinée ?","4",["3","5","6"],"Guinée maritime, Moyenne-Guinée, Haute-Guinée et Guinée forestière."],
+ ["Géographie","Quel est le surnom du Fouta-Djalon ?","Le château d'eau de l'Afrique de l'Ouest",["Le grenier du Sahel","Le toit de l'Afrique","La porte du désert"],"Le Sénégal et la Gambie y prennent leur source, et le Niger naît tout près."],
+ ["Géographie","Lequel de ces grands fleuves prend sa source en Guinée ?","Le Niger",["Le Nil","Le Congo","La Volta"],"Le Niger traverse ensuite le Mali, le Niger et le Nigeria."],
+ ["Géographie","Quel est le point culminant de la Guinée ?","Le mont Nimba",["Le mont Loura","Le mont Kakoulima","Le mont Cameroun"],"Environ 1 750 m, à la frontière avec la Côte d'Ivoire et le Liberia. Sa réserve est classée à l'UNESCO."],
+ ["Géographie","Quelle ville est la capitale de la Guinée forestière ?","Nzérékoré",["Kankan","Labé","Boké"],"Kankan est la grande ville de Haute-Guinée."],
+ ["Géographie","Quelle ville est considérée comme la capitale du Fouta-Djalon ?","Labé",["Kankan","Nzérékoré","Boké"],"Le Fouta-Djalon correspond à la Moyenne-Guinée."],
+ ["Géographie","Comment s'appellent les îles situées au large de Conakry ?","Les îles de Loos",["Les îles Bijagos","Les îles du Cap-Vert","Les îles Canaries"],"Les Bijagos appartiennent à la Guinée-Bissau."],
+ ["Géographie","Sur quelle presqu'île se trouve le centre de Conakry ?","Kaloum",["Cap-Vert","Plateau","Tombo"],"Conakry a d'abord été fondée sur l'île de Tombo, reliée ensuite à la presqu'île."],
+ ["Géographie","Par sa superficie, la Guinée est à peu près aussi grande que…","le Royaume-Uni",["la Belgique","la France","l'Algérie"],"Environ 246 000 km², contre 243 000 pour le Royaume-Uni."],
+ ["Géographie","Quelle célèbre cascade se trouve dans la région de Kindia ?","Le Voile de la Mariée",["Les chutes Victoria","Les chutes de la Lobé","Les chutes de Félou"],"Une sortie classique pour les Conakrykas le week-end."],
+ ["Économie","La Guinée possède les plus grandes réserves au monde de…","bauxite",["or","pétrole","cuivre"],"La bauxite sert à fabriquer l'aluminium."],
+ ["Économie","Le gisement géant de Simandou contient surtout du…","minerai de fer",["diamant","uranium","gaz"],"C'est l'un des plus riches gisements de fer inexploités au monde jusqu'à récemment."],
+ ["Économie","Quelle est la monnaie de la Guinée ?","Le franc guinéen",["Le franc CFA","Le cedi","Le naira"],"La Guinée n'utilise pas le franc CFA depuis 1960."],
+ ["Économie","Avant 1986, comment s'appelait la monnaie guinéenne ?","Le syli",["Le dalasi","Le leone","Le kwacha"],"Le dalasi est gambien, le leone sierra-léonais."],
+ ["Culture","Quelle est la langue officielle de la Guinée ?","Le français",["Le soussou","Le pular","Le malinké"],"Le soussou, le pular et le malinké sont les grandes langues nationales."],
+ ["Culture","Lequel de ces peuples n'est PAS l'un des grands groupes de Guinée ?","Les Zoulous",["Les Peuls","Les Malinkés","Les Soussous"],"Les Zoulous vivent en Afrique du Sud."],
+ ["Culture","Quelles sont les couleurs du drapeau guinéen, de gauche à droite ?","Rouge, jaune, vert",["Vert, jaune, rouge","Orange, blanc, vert","Rouge, blanc, vert"],"Vert, jaune, rouge, c'est le drapeau du Mali."],
+ ["Culture","Quelle est la devise de la Guinée ?","Travail, Justice, Solidarité",["Un Peuple, Un But, Une Foi","Unité, Travail, Progrès","Paix, Travail, Patrie"],"Un Peuple, Un But, Une Foi est la devise du Mali et du Sénégal."],
+ ["Culture","Comment s'appelle l'hymne national guinéen ?","Liberté",["L'Abidjanaise","Le Mali","La Patrie"],"Il a été adopté en 1958, à l'indépendance."],
+ ["Musique","Quel tube planétaire Mory Kanté a-t-il sorti en 1987 ?","Yé ké yé ké",["Pata Pata","Soul Makossa","Africa"],"Il a été l'un des premiers grands succès africains en discothèque en Europe."],
+ ["Musique","Quelle chanteuse sud-africaine a vécu de longues années en exil en Guinée ?","Miriam Makeba",["Angélique Kidjo","Cesária Évora","Oumou Sangaré"],"Elle s'y est installée à la fin des années 1960."],
+ ["Musique","Quel orchestre mythique guinéen est né à Beyla ?","Le Bembeya Jazz",["L'Orchestra Baobab","Le Rail Band","Les Ambassadeurs"],"Son nom vient de la rivière Bembeya."],
+ ["Musique","Quel instrument mandingue compte traditionnellement 21 cordes ?","La kora",["Le balafon","Le djembé","Le ngoni"],"Le balafon est un xylophone et le djembé un tambour."],
+ ["Culture","Qu'a fondé Fodéba Keïta dans les années 1950 ?","Les Ballets africains",["Le Bembeya Jazz","Le Hafia FC","Radio Conakry"],"La troupe a fait des tournées dans le monde entier."],
+ ["Culture","Quel roman de Camara Laye, paru en 1953, raconte son enfance en Haute-Guinée ?","L'Enfant noir",["Une si longue lettre","Les Soleils des indépendances","Le Vieux Nègre et la Médaille"],"Il est encore étudié dans les écoles de toute l'Afrique francophone."],
+ ["Culture","Quel prix littéraire Tierno Monénembo a-t-il reçu en 2008 ?","Le prix Renaudot",["Le prix Goncourt","Le prix Femina","Le prix Médicis"],"Pour Le Roi de Kahel."],
+ ["Sport","Quel est le surnom de l'équipe nationale de football ?","Le Syli national",["Les Éléphants","Les Aigles","Les Lions de la Teranga"],"Les Éléphants, c'est la Côte d'Ivoire."],
+ ["Sport","Que signifie « syli » en soussou ?","Éléphant",["Lion","Aigle","Panthère"],"L'éléphant était aussi le symbole du parti de Sékou Touré."],
+ ["Sport","En quelle année la Guinée a-t-elle terminé deuxième de la CAN ?","1976",["1984","1998","2015"],"Son meilleur résultat à ce jour, en Éthiopie."],
+ ["Sport","Quel club guinéen a remporté trois fois la Coupe d'Afrique des clubs dans les années 1970 ?","Hafia FC",["Horoya AC","Kaloum Star","ASEC Mimosas"],"En 1972, 1975 et 1977."],
+ ["Sport","Avec quel club Naby Keïta a-t-il gagné la Ligue des champions en 2019 ?","Liverpool",["RB Leipzig","Werder Brême","FC Barcelone"],"Liverpool a battu Tottenham en finale à Madrid."],
+ ["Sport","Quel attaquant guinéen a rejoint le Borussia Dortmund en 2024 ?","Serhou Guirassy",["Naby Keïta","François Kamano","Mohamed Bayo"],"Il sortait d'une saison record avec Stuttgart."],
+ ["Cuisine","Avec quoi prépare-t-on traditionnellement la sauce feuille ?","Des feuilles de manioc",["Des feuilles de bananier","Des feuilles de menthe","Des feuilles de vigne"],"On la sert le plus souvent avec du riz."],
+ ["Cuisine","Quelle petite céréale ancienne est cultivée au Fouta-Djalon ?","Le fonio",["Le quinoa","Le sarrasin","L'épeautre"],"Elle se cuit très vite et pousse même sur des sols pauvres."],
+ ["Culture","Le djembé vient de la tradition de quel peuple ?","Les Mandingues",["Les Zoulous","Les Berbères","Les Massaïs"],"Le Guinéen Mamady Keïta l'a fait connaître dans le monde entier."],
+ ["Divers","Quel est l'indicatif téléphonique de la Guinée ?","+224",["+221","+223","+225"],"+221 Sénégal, +223 Mali, +225 Côte d'Ivoire."]
+];
+
+const QH = [
+ ["Histoire","À quelle date exacte Sékou Touré a-t-il prononcé son discours face au général de Gaulle ?","25 août 1958",["28 septembre 1958","2 octobre 1958","14 juillet 1958"],"Le 28 septembre est la date du référendum, le 2 octobre celle de l'indépendance."],
+ ["Histoire","Le Stade du 28-Septembre de Conakry doit son nom à…","Le référendum de 1958",["La fondation du PDG","La mort de Samory Touré","La première victoire du Syli"],"Le « non » du 28 septembre 1958 a ouvert la voie à l'indépendance."],
+ ["Histoire","Comment s'appelait le parti unique de Sékou Touré ?","Le PDG",["Le RDA guinéen","Le PUP","L'UPG"],"Parti démocratique de Guinée, section du RDA. Le PUP sera le parti de Lansana Conté."],
+ ["Histoire","Dans quelle ville est né Ahmed Sékou Touré ?","Faranah",["Kankan","Conakry","Siguiri"],"Il est né en 1922 en Haute-Guinée."],
+ ["Histoire","De quel grand personnage Sékou Touré se disait-il descendant ?","Samory Touré",["Soundiata Keïta","Alfa Yaya Diallo","El Hadj Oumar Tall"],"Un héritage qu'il mettait en avant pour incarner la résistance."],
+ ["Histoire","Quelle était la capitale de l'empire du Wassoulou de Samory Touré ?","Bissandougou",["Timbo","Kankan","Ségou"],"Samory y a établi son pouvoir dans les années 1870-1880."],
+ ["Histoire","Où Samory Touré est-il mort en exil, en 1900 ?","Au Gabon",["Au Sénégal","En Martinique","À Madagascar"],"Capturé en 1898, il a été déporté à Ndjolé."],
+ ["Histoire","Quelle était la capitale politique de l'imamat peul du Fouta-Djalon ?","Timbo",["Labé","Fougoumba","Dalaba"],"Fougoumba en était le centre religieux, où l'on intronisait l'almamy."],
+ ["Histoire","Quel roi du Labé fut déporté par les Français au début du XXe siècle ?","Alfa Yaya Diallo",["Bokar Biro","Samory Touré","Karamoko Alfa"],"Il est mort en exil à Port-Étienne, l'actuelle Nouadhibou, en Mauritanie."],
+ ["Histoire","Quel Guinéen fut le premier secrétaire général de l'OUA ?","Diallo Telli",["Fodéba Keïta","Louis Lansana Beavogui","Saïfoulaye Diallo"],"Il l'a dirigée de 1964 à 1972 avant de mourir au camp Boiro en 1977."],
+ ["Histoire","Qu'était le camp Boiro, à Conakry ?","Une prison politique",["Une caserne de la marine","Un camp de réfugiés","Un centre de formation du PDG"],"Des milliers d'opposants réels ou supposés y ont été détenus sous Sékou Touré."],
+ ["Histoire","Quel pays a lancé l'opération « Mar Verde » contre Conakry en novembre 1970 ?","Le Portugal",["La France","Le Sénégal","L'Afrique du Sud"],"Le Portugal voulait libérer ses prisonniers et frapper le PAIGC, installé à Conakry."],
+ ["Histoire","Quel leader indépendantiste de Guinée-Bissau fut assassiné à Conakry en 1973 ?","Amílcar Cabral",["Agostinho Neto","Samora Machel","Eduardo Mondlane"],"Il dirigeait le PAIGC depuis sa base de Conakry."],
+ ["Histoire","Quel dirigeant renversé en 1966 fut accueilli à Conakry et nommé co-président de la Guinée ?","Kwame Nkrumah",["Modibo Keïta","Patrice Lumumba","Ahmed Ben Bella"],"Le Ghana et la Guinée avaient formé une union dès 1958."],
+ ["Histoire","Comment s'appelait la junte de Moussa Dadis Camara, arrivée au pouvoir en décembre 2008 ?","Le CNDD",["Le CNRD","Le CMRN","Le CNT"],"Conseil national pour la démocratie et le développement. Le CMRN était la junte de Lansana Conté en 1984."],
+ ["Histoire","Comment s'appelle le comité militaire qui a pris le pouvoir le 5 septembre 2021 ?","Le CNRD",["Le CNDD","Le CMRN","Le CNSP"],"Comité national du rassemblement et du développement. Le CNSP est la junte du Niger."],
+ ["Histoire","En quelle année Lansana Conté est-il mort, au pouvoir ?","2008",["2006","2010","2004"],"Il est mort le 22 décembre 2008, après 24 ans de présidence."],
+ ["Géographie","Combien de régions administratives compte la Guinée, Conakry comprise ?","8",["4","7","11"],"Boké, Conakry, Faranah, Kankan, Kindia, Labé, Mamou et Nzérékoré."],
+ ["Géographie","Combien de préfectures compte la Guinée ?","33",["24","41","18"],"Sans compter les communes de Conakry."],
+ ["Géographie","Quelle est l'altitude du mont Nimba, point culminant du pays ?","1 752 m",["1 515 m","2 010 m","1 248 m"],"Le massif est partagé avec la Côte d'Ivoire et le Liberia."],
+ ["Géographie","Sur quel fleuve ont été construits les barrages de Kaléta et Souapiti ?","Le Konkouré",["Le Niger","Le Bafing","La Fatala"],"Le barrage de Garafiri est aussi sur le Konkouré."],
+ ["Géographie","Dans quelle région naturelle se trouve le gisement de fer de Simandou ?","Guinée forestière",["Haute-Guinée","Moyenne-Guinée","Guinée maritime"],"Le minerai doit traverser tout le pays en train jusqu'à la côte."],
+ ["Géographie","Lequel de ces peuples vit surtout en Guinée forestière ?","Les Guerzés",["Les Bagas","Les Soussous","Les Peuls"],"On y trouve aussi les Kissi, les Toma et les Manon."],
+ ["Économie","Quel port de la région de Boké exporte la bauxite de la CBG ?","Kamsar",["Benty","Boffa","Koba"],"La Compagnie des bauxites de Guinée y fait arriver son minerai par chemin de fer."],
+ ["Économie","Quelle ville abrite la première usine d'alumine d'Afrique, ouverte en 1960 ?","Fria",["Kamsar","Sangarédi","Débéle"],"L'alumine est l'étape entre la bauxite et l'aluminium."],
+ ["Économie","En quelle année le syli a-t-il remplacé le franc guinéen ?","1972",["1958","1965","1985"],"Le franc guinéen est revenu en 1986, sous Lansana Conté."],
+ ["Culture","Qui a inventé l'alphabet N'Ko en 1949 ?","Solomana Kanté",["Camara Laye","Djibril Tamsir Niane","Fodéba Keïta"],"N'Ko veut dire « je dis » dans toutes les langues mandingues."],
+ ["Culture","Le masque Nimba, symbole de fécondité, est l'œuvre de quel peuple ?","Les Bagas",["Les Kissi","Les Malinkés","Les Peuls"],"Il est l'un des emblèmes de l'art guinéen dans les musées du monde."],
+ ["Culture","Quel autre roman de Camara Laye est paru en 1954 ?","Le Regard du roi",["Dramouss","Le Devoir de violence","L'Aventure ambiguë"],"Dramouss est de Camara Laye aussi, mais date de 1966."],
+ ["Culture","Quel est le vrai nom de l'écrivain Tierno Monénembo ?","Thierno Saïdou Diallo",["Thierno Diallo Telli","Saïdou Camara","Alpha Oumar Barry"],"Son prix Renaudot 2008 raconte la vie de l'explorateur Olivier de Sanderval."],
+ ["Culture","Quel historien guinéen a publié « Soundjata ou l'épopée mandingue » en 1960 ?","Djibril Tamsir Niane",["Joseph Ki-Zerbo","Amadou Hampâté Bâ","Cheikh Anta Diop"],"Il a recueilli le récit auprès du griot Mamadou Kouyaté."],
+ ["Culture","La grande université publique de Conakry porte le nom de…","Gamal Abdel Nasser",["Kwame Nkrumah","Julius Nyerere","Patrice Lumumba"],"L'université Julius Nyerere se trouve à Kankan."],
+ ["Musique","Avant sa carrière solo, Mory Kanté chantait dans quel orchestre de Bamako ?","Le Rail Band",["Les Ambassadeurs","Le Super Biton","L'Orchestra Baobab"],"Il y a remplacé Salif Keïta au chant."],
+ ["Musique","Quel chanteur a commencé comme voix du Bembeya Jazz avant une grande carrière solo ?","Sékouba Bambino",["Salif Keïta","Alpha Blondy","Youssou N'Dour"],"Il a aussi chanté avec Africando, le groupe de salsa africaine."],
+ ["Musique","Qui étaient les « Amazones de Guinée » ?","Un orchestre de femmes gendarmes",["Une équipe de football féminine","Une troupe de ballet","Un groupe de griottes du Fouta"],"Un des premiers orchestres entièrement féminins d'Afrique."],
+ ["Musique","Quel militant américain des droits civiques a épousé Miriam Makeba et vécu à Conakry ?","Stokely Carmichael",["Malcolm X","Huey Newton","Jesse Jackson"],"Il a pris le nom de Kwame Ture, en hommage à Nkrumah et Sékou Touré."],
+ ["Sport","Quel Guinéen a joué pour Liverpool à la fin des années 1990 ?","Titi Camara",["Pascal Feindouno","Kaba Diawara","Ibrahima Traoré"],"Bien avant Naby Keïta."],
+ ["Sport","Quelle CAN la Guinée devait-elle organiser avant que la CAF ne la lui retire en 2022 ?","La CAN 2025",["La CAN 2019","La CAN 2023","La CAN 2027"],"Elle a été attribuée au Maroc."],
+ ["Sport","Le stade Général Lansana Conté a été construit dans quel quartier de Conakry ?","Nongo",["Kaloum","Dixinn","Matam"],"Le Stade du 28-Septembre, lui, est à Dixinn."]
+];
+
+const $ = s => document.querySelector(s);
+const arena = $('#arena'), halves = [$('.half.p1'), $('.half.p2')];
+const KEYS = [['a','z','e','r'], ['u','i','o','p']];
+const DUR = 15000;
+let G = null, raf = 0, nextT = 0, SOLO = true;
+const LVL = ['Classique', 'Costaud', 'Mélange'];
+const fmt = n => n.toLocaleString('fr-FR').replace(/[\u202f\u00a0]/g, '\u00a0');
+const LEAD = {
+  solo: "Histoire, géographie, musique, foot et cuisine. Réponds vite : plus tu es rapide, plus tu marques. Enchaîne trois bonnes réponses pour un bonus, et garde ton joker 50/50 pour la question qui coince.",
+  duo: "Histoire, géographie, musique, foot et cuisine. Une question pour deux : le premier qui trouve la bonne réponse marque. Une erreur et tu es bloqué jusqu'à la question suivante."
+};
+function syncSetup() {
+  const solo = $('#pl1').checked;
+  $('#lead').textContent = solo ? LEAD.solo : LEAD.duo;
+  $('#n2wrap').hidden = solo; $('#poswrap').hidden = solo; $('#keyhint').hidden = solo;
+  $('#n1lbl').textContent = solo ? 'Ton prénom' : 'Joueur rouge';
+  $('.names').style.gridTemplateColumns = solo ? '1fr' : '';
+}
+const isTouch = matchMedia('(pointer: coarse)').matches;
+(isTouch ? $('#mf') : $('#ms')).checked = true;
+if (!isTouch) document.body.classList.add('kb');
+document.querySelectorAll('input[name=pl]').forEach(r => r.addEventListener('change', syncSetup));
+syncSetup();
+
+function shuffle(a) { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
+
+function start() {
+  const n = +document.querySelector('input[name=cnt]:checked').value;
+  const names = [$('#n1').value.trim() || 'Rouge', $('#n2').value.trim() || 'Vert'];
+  const lvl = +document.querySelector('input[name=lvl]:checked').value;
+  const pool = lvl === 0 ? Q : lvl === 1 ? QH : Q.concat(QH);
+  SOLO = $('#pl1').checked;
+  G = { qs: shuffle(pool).slice(0, n), i: -1, score: [0, 0], names, locked: [false, false], done: false, t0: 0,
+        lvl, pts: 0, streak: 0, good: 0, joker: true, missed: [] };
+  arena.className = SOLO ? 'solo' : document.querySelector('input[name=mode]:checked').value;
+  $('#joker').hidden = !SOLO; $('#joker').disabled = false; $('#streak').textContent = '';
+  halves.forEach((h, p) => { h.querySelector('.nm').textContent = names[p]; h.querySelector('.pts').textContent = '0'; });
+  $('#setup').hidden = true; $('#end').hidden = true; arena.hidden = false;
+  next();
+}
+
+function next() {
+  clearTimeout(nextT);
+  G.i++;
+  if (G.i >= G.qs.length) return finish();
+  const [cat, q, a, w, info] = G.qs[G.i];
+  G.opts = shuffle([a, ...w]); G.right = G.opts.indexOf(a);
+  G.locked = [false, false]; G.done = false; G.info = info;
+  $('.mid .num').textContent = (G.i + 1) + ' / ' + G.qs.length;
+  $('.mid .cat').textContent = cat;
+  $('.mid .info').textContent = '';
+  halves.forEach((h, p) => {
+    h.classList.remove('locked');
+    h.querySelector('.q').textContent = q;
+    h.querySelector('.status').textContent = ''; h.querySelector('.status').className = 'status';
+    const box = h.querySelector('.ans'); box.innerHTML = '';
+    G.opts.forEach((o, k) => {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.innerHTML = `<span></span><kbd>${KEYS[p][k].toUpperCase()}</kbd>`;
+      b.querySelector('span').textContent = o;
+      b.addEventListener('pointerdown', e => { e.preventDefault(); answer(p, k); });
+      b.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); answer(p, k); } });
+      box.appendChild(b);
+    });
+  });
+  if (SOLO) $('#joker').disabled = !G.joker;
+  G.t0 = performance.now();
+  cancelAnimationFrame(raf); tick();
+}
+
+function tick() {
+  if (!G || G.done) return;
+  const left = 1 - (performance.now() - G.t0) / DUR;
+  $('.mid .bar i').style.transform = `scaleX(${Math.max(0, left)})`;
+  if (left <= 0) { resolve(null, 'Temps écoulé'); return; }
+  raf = requestAnimationFrame(tick);
+}
+
+function answer(p, k) {
+  if (!G || G.done || G.locked[p]) return;
+  const btn = halves[p].querySelectorAll('.ans button')[k];
+  if (SOLO) {
+    if (p !== 0 || btn.classList.contains('gone')) return;
+    if (k === G.right) {
+      const left = Math.max(0, 1 - (performance.now() - G.t0) / DUR);
+      G.streak++; G.good++;
+      const gain = 100 + Math.round(left * 100) + (G.streak >= 3 ? 50 : 0);
+      G.pts += gain;
+      halves[0].querySelector('.pts').textContent = fmt(G.pts);
+      G.msg = '+' + gain + ' points' + (G.streak >= 3 ? ' · bonus série' : '');
+      resolve(0);
+    } else { btn.classList.add('wrong'); resolve(null, 'Raté'); }
+    return;
+  }
+  if (k === G.right) {
+    G.score[p]++;
+    halves[p].querySelector('.pts').textContent = G.score[p];
+    resolve(p);
+  } else {
+    G.locked[p] = true;
+    btn.classList.add('wrong');
+    halves[p].classList.add('locked');
+    halves[p].querySelector('.status').textContent = 'Raté, attends la suivante';
+    if (G.locked[0] && G.locked[1]) resolve(null, 'Personne n\'a trouvé');
+  }
+}
+
+function resolve(winner, why) {
+  G.done = true; cancelAnimationFrame(raf);
+  if (SOLO) {
+    if (winner === null) { G.streak = 0; G.missed.push(G.qs[G.i]); }
+    $('#streak').textContent = G.streak >= 2 ? 'Série de ' + G.streak : '';
+    $('#joker').disabled = true;
+    const bs = halves[0].querySelectorAll('.ans button');
+    bs[G.right].classList.add('right'); bs.forEach(b => b.disabled = true);
+    const st = halves[0].querySelector('.status');
+    if (winner === 0) { st.textContent = G.msg; st.className = 'status win'; }
+    else st.textContent = why + ', la bonne réponse est en jaune';
+    $('.mid .info').textContent = G.info;
+    nextT = setTimeout(next, 4200);
+    return;
+  }
+  halves.forEach((h, p) => {
+    const bs = h.querySelectorAll('.ans button');
+    bs[G.right].classList.add('right');
+    bs.forEach(b => b.disabled = true);
+    const st = h.querySelector('.status');
+    if (winner === p) { st.textContent = 'Bien joué, +1 point'; st.className = 'status win'; }
+    else if (winner !== null) st.textContent = G.names[winner] + ' a été plus rapide';
+    else st.textContent = why;
+  });
+  $('.mid .info').textContent = G.info;
+  nextT = setTimeout(next, 3600);
+}
+
+function finish() {
+  cancelAnimationFrame(raf);
+  const rv = $('#review'); rv.innerHTML = '';
+  if (SOLO) {
+    const key = 'duel-guinee-best-' + G.lvl;
+    let best = 0; try { best = +localStorage.getItem(key) || 0; } catch (_) {}
+    const rec = G.pts > best;
+    if (rec) { best = G.pts; try { localStorage.setItem(key, G.pts); } catch (_) {} }
+    $('#endlbl').textContent = 'Partie solo · ' + LVL[G.lvl];
+    $('#winner').textContent = fmt(G.pts) + ' points';
+    $('#s1').textContent = G.good + '/' + G.qs.length; $('#e1').textContent = 'bonnes réponses';
+    $('#s2').textContent = fmt(best); $('#e2').textContent = rec ? 'Nouveau record !' : 'Ton record';
+    if (G.missed.length) {
+      const h = document.createElement('span'); h.className = 'lbl'; h.textContent = 'À retenir'; rv.appendChild(h);
+      G.missed.forEach(([, q, a]) => {
+        const d = document.createElement('div'); d.className = 'rv';
+        d.textContent = q; const b = document.createElement('b'); b.textContent = a; d.appendChild(b); rv.appendChild(d);
+      });
+    }
+    $('#again').textContent = 'REJOUER';
+    arena.hidden = true; $('#end').hidden = false; $('#end').scrollTop = 0;
+    return;
+  }
+  $('#endlbl').textContent = 'Fin du duel'; $('#again').textContent = 'REVANCHE';
+  const [a, b] = G.score;
+  $('#winner').textContent = a === b ? 'Égalité parfaite' : (a > b ? G.names[0] : G.names[1]) + ' gagne !';
+  $('#s1').textContent = a; $('#s2').textContent = b;
+  $('#e1').textContent = G.names[0]; $('#e2').textContent = G.names[1];
+  arena.hidden = true; $('#end').hidden = false;
+}
+
+addEventListener('keydown', e => {
+  if (!G || arena.hidden || e.repeat) return;
+  const k = e.key.toLowerCase();
+  if (SOLO) { let i = KEYS[0].indexOf(k); if (i < 0) i = ['1','2','3','4'].indexOf(k); if (i >= 0) answer(0, i); }
+  else for (let p = 0; p < 2; p++) { const i = KEYS[p].indexOf(k); if (i >= 0) answer(p, i); }
+  if (G.done && (k === ' ' || k === 'enter')) next();
+});
+$('.mid').addEventListener('click', e => { if (e.target.id !== 'quit' && G && G.done) next(); });
+$('#joker').onclick = () => {
+  if (!G || G.done || !G.joker) return;
+  G.joker = false; $('#joker').disabled = true;
+  const bs = [...halves[0].querySelectorAll('.ans button')];
+  shuffle([0, 1, 2, 3].filter(i => i !== G.right)).slice(0, 2).forEach(i => bs[i].classList.add('gone'));
+};
+$('#start').onclick = start;
+$('#again').onclick = start;
+$('#back').onclick = () => { $('#end').hidden = true; $('#setup').hidden = false; };
+$('#quit').onclick = () => { clearTimeout(nextT); cancelAnimationFrame(raf); G = null; arena.hidden = true; $('#setup').hidden = false; };
+})();
+</script>
+<script>if("serviceWorker" in navigator)addEventListener("load",()=>navigator.serviceWorker.register("sw.js").catch(()=>{}));</script>
+
+</body></html>
